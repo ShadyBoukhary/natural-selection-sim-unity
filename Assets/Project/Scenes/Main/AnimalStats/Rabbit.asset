@@ -20,5 +20,6 @@ MonoBehaviour:
   attackSpeed: 0.1
   territorial: 0
   stealthy: 0
-  reproduction: 0
+  reproduction: 80
   maxAge: 1000
+  digestionRate: 1

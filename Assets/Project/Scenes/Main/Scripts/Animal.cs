@@ -8,6 +8,16 @@ namespace Simulator {
 	[RequireComponent(typeof(Animator)), RequireComponent(typeof(CharacterController))]
 	public class Animal : WanderScript {
 
+		public MovementState[] MovementStates => movementStates;
+		public bool IsFemale => isFemale;
+		[Space(), Header("Reproductive AI"), Space(5)]
+		[SerializeField, Tooltip("How far this animal can find a mate.")]
+		protected float mateAwareness = 30f;
+
+		[SerializeField, Tooltip("Whether the animal is a female.")]
+		protected bool isFemale;
+
+		private float hunger = 100;
 		protected override void Awake() {
 			if (idleStates.Length == 0 && movementStates.Length == 0) {
 
@@ -41,91 +51,163 @@ namespace Simulator {
 			allAnimals.Add(this);
 		}
 
-		private Animal GetAnimal(int i) {
+
+		private static Animal GetAnimal(int i) {
 			return (Animal)allAnimals[i];
 		}
+
 
 		protected override void DecideNextState(bool wasIdle, bool firstState = false) {
 			attacking = false;
 
-			// Look for a predator.
-			if (awareness > 0) {
-				for (int i = 0; i < allAnimals.Count; i++) {
-					if (GetAnimal(i).dead == true || GetAnimal(i) == this || GetAnimal(i).species == species || GetAnimal(i).ScriptableAnimalStats.dominance <= ScriptableAnimalStats.dominance || GetAnimal(i).ScriptableAnimalStats.stealthy) {
-						continue;
-					}
+			SearchReport report = SearchForAnimals();
 
-					if (Vector3.Distance(transform.position, GetAnimal(i).transform.position) > awareness) {
-						continue;
-					}
-
-					if (useNavMesh) {
-						RunAwayFromAnimal(GetAnimal(i));
-					} else {
-						NonNavMeshRunAwayFromAnimal(GetAnimal(i));
-					}
-
-					if (logChanges) {
-						Debug.Log(string.Format("{0}: Found predator ({1}), running away.", gameObject.name, GetAnimal(i).gameObject.name));
-					}
-
-					return;
+			// Run away from predator if found
+			if (report.FoundPredator) {
+        if (logChanges) {
+					Debug.Log($"{gameObject.name}: Found predator ({GetAnimal(report.PredatorIndex).gameObject.name}), running away.");
 				}
-			}
+				if (useNavMesh) {
+					RunAwayFromAnimal(GetAnimal(report.PredatorIndex));
 
-			// Look for pray.
-			if (ScriptableAnimalStats.dominance > 0) {
-				for (int i = 0; i < allAnimals.Count; i++) {
-					if (GetAnimal(i).dead == true || GetAnimal(i) == this || (GetAnimal(i).species == species && !ScriptableAnimalStats.territorial) || GetAnimal(i).ScriptableAnimalStats.dominance > ScriptableAnimalStats.dominance || GetAnimal(i).ScriptableAnimalStats.stealthy) {
-						continue;
-					}
-
-					int p = System.Array.IndexOf(nonAgressiveTowards, GetAnimal(i).species);
-					if (p > -1) {
-						continue;
-					}
-
-					if (Vector3.Distance(transform.position, GetAnimal(i).transform.position) > scent) {
-						continue;
-					}
-
-					if (Random.Range(0, 100) > ScriptableAnimalStats.agression) {
-						continue;
-					}
-
-					if (logChanges) {
-						Debug.Log(string.Format("{0}: Found prey ({1}), chasing.", gameObject.name, GetAnimal(i).gameObject.name));
-					}
-
-					ChaseAnimal(GetAnimal(i));
-					return;
+				} else {
+					NonNavMeshRunAwayFromAnimal(GetAnimal(report.PredatorIndex));
 				}
-			}
 
-			if (wasIdle && movementStates.Length > 0) {
+				// Chase prey if found
+			} else if (report.FoundPrey) {
+				if (logChanges) {
+					Debug.Log($"{gameObject.name}: Found prey ({GetAnimal(report.PreyIndex).gameObject.name}), chasing.");
+				}
+				ChaseAnimal(GetAnimal(report.PreyIndex));
+
+				// Approach animal to mate if found
+			} else if (report.FoundMate) {
+        if (logChanges) {
+					Debug.Log($"{gameObject.name}: Found mate ({GetAnimal(report.MateIndex).gameObject.name}), approaching.");
+				}
+				// TODO: implement
+
+				// Start wandering if previously idle
+			} else if (wasIdle && movementStates.Length > 0) {
 				if (logChanges) {
 					Debug.Log(string.Format("{0}: Wandering.", gameObject.name));
 				}
 				BeginWanderState();
-				return;
+
+				// Idle otherwise
 			} else if (idleStates.Length > 0) {
 				if (logChanges) {
 					Debug.Log(string.Format("{0}: Idling.", gameObject.name));
 				}
 				BeginIdleState(firstState);
-				return;
-			}
 
-			// Backup selection.
-			if (idleStates.Length == 0) {
+				// backup selection
+			} else if (idleStates.Length == 0) {
 				BeginWanderState();
+
 			} else if (movementStates.Length == 0) {
 				BeginIdleState();
+			} else {
+				Debug.LogError($"{gameObject.name}: Unknown state when deciding next state.");
 			}
+
 		}
 		protected override void OnDestroy() {
 			allAnimals.Remove(this);
 		}
+
+		private SearchReport SearchForAnimals() {
+
+			bool foundPredator = false, foundPrey = false, foundMate = false;
+			int predatorIndex = -1, preyIndex = -1, mateIndex = -1;
+
+			for (int i = 0; i < allAnimals.Count; i++) {
+				// Check if it's a predator
+				if (awareness > 0 && !foundPredator && IsPredator(GetAnimal(i))) {
+					foundPredator = true;
+					predatorIndex = i;
+					
+					// If a predator is found there is no need to continue
+					return new SearchReport(i);
+
+					// Check if it's a prey
+				} else if (ScriptableAnimalStats.dominance > 0 && !foundPrey && IsPrey(GetAnimal(i))) {
+					foundPrey = true;
+					preyIndex = i;
+
+					// Check if it's a mate
+				} else if (ScriptableAnimalStats.reproduction > 0 && !foundMate && IsMate(GetAnimal(i))) {
+					foundMate = true;
+					mateIndex = i;
+				}
+			}
+			return new SearchReport(predatorIndex, preyIndex, mateIndex);
+		}
+
+		private bool IsPredator(Animal potentialPredator) {
+			return IsWithinRange(potentialPredator, awareness) && potentialPredator.CanAttack(this);
+		}
+
+		private bool IsPrey(Animal potentialPrey) {
+			return CanAttack(potentialPrey)
+				&& IsAggressiveTowards(potentialPrey)
+				&& IsWithinRange(potentialPrey, scent)
+				&& WillAttackDueToChance();
+		}
+
+		private bool CanAttack(Animal potentialPrey) {
+			return !potentialPrey.dead && potentialPrey != this
+				&& (potentialPrey.species != species || ScriptableAnimalStats.territorial)
+				&& potentialPrey.ScriptableAnimalStats.dominance <= ScriptableAnimalStats.dominance
+				&& !potentialPrey.ScriptableAnimalStats.stealthy;
+		}
+
+		private bool IsAggressiveTowards(Animal other) {
+			int p = System.Array.IndexOf(nonAgressiveTowards, other.species);
+			return p < 0;
+		}
+
+		private bool IsWithinRange(Animal animal, float range) {
+			return Vector3.Distance(transform.position, animal.transform.position) <= range;
+		}
+
+		private bool WillAttackDueToChance() {
+			return ScriptableAnimalStats.agression >= Random.Range(0, 100);
+		}
+
+		private bool CanMate() {
+			return !dead && !attacking && hunger >= 80;
+		}
+
+		private bool IsMate(Animal potentialMate) {
+			return CanMate() && potentialMate != this && species == potentialMate.species
+				&& AnimalUtils.AreOppositeSex(this, potentialMate) && potentialMate.CanMate()
+				&& IsWithinRange(potentialMate, mateAwareness) && WillMateDueToChance()
+				&& potentialMate.WillMateDueToChance(); // because consent is mandatory
+		}
+
+		private bool WillMateDueToChance() {
+			return ScriptableAnimalStats.reproduction >= Random.Range(0, 100);
+		}
+
+		class SearchReport {
+			public int PredatorIndex { get; set; }
+			public int PreyIndex { get; set; }
+			public int MateIndex { get; set; }
+			public bool FoundPredator => PredatorIndex > -1;
+			public bool FoundPrey => PreyIndex > -1;
+			public bool FoundMate => MateIndex > -1;
+
+			public SearchReport(int predatorIndex = -1, int preyIndex = -1, int mateIndex = -1) {
+				PredatorIndex = predatorIndex;
+				PreyIndex = preyIndex;
+				MateIndex = mateIndex;
+			}
+
+		}
 	}
+
+
 
 }

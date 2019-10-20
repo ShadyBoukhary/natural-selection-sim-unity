@@ -22,3 +22,4 @@ MonoBehaviour:
   stealthy: 0
   reproduction: 20.8
   maxAge: 327
+  digestionRate: 0.5

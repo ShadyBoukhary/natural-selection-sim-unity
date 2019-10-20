@@ -13,6 +13,9 @@ namespace Simulator
 
         [SerializeField, Tooltip("Maximum age of animal."), Range(0f, 1000f)]
         public float maxAge = 1000;
+
+        [SerializeField, Tooltip("Digestion Rate of animal. High rate means faster hunger."), Range(0f, 1f)]
+        public float digestionRate = 1;
     }
 
 }
