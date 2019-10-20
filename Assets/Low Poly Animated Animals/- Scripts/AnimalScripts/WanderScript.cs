@@ -1,38 +1,38 @@
 ﻿using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
+using Simulator;
 using UnityEngine.AI;
-
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
 
-namespace LowPolyAnimalPack
+namespace LowPolyAnimalPack 
 {
   [RequireComponent(typeof(Animator)), RequireComponent(typeof(CharacterController))]
   public class WanderScript : MonoBehaviour
   {
-    private const float contingencyDistance = 1f;
+    protected const float contingencyDistance = 1f;
 
     [Header("Animation States"), Space(5)]
     [SerializeField]
-    private IdleState[] idleStates;
+    protected IdleState[] idleStates;
     [SerializeField]
-    private MovementState[] movementStates;
+    protected MovementState[] movementStates;
     [SerializeField]
-    private AnimalState[] attackingStates;
+    protected AnimalState[] attackingStates;
     [SerializeField]
-    private AnimalState[] deathStates;
+    protected AnimalState[] deathStates;
 
     [Space(), Header("AI"), Space(5)]
     [SerializeField]
-    private string species = "NA";
+    protected string species = "NA";
 
-    [SerializeField, Tooltip("This specific animal stats asset, create a new one from the asset menu under (LowPolyAnimals/NewAnimalStats)")]
-    AnimalStats ScriptableAnimalStats;
+    [SerializeField, Tooltip("This specific animal stats asset, create a new one from the asset menu under (Simulator/NewAnimalStats)")]
+    protected Simulator.AnimalStats ScriptableAnimalStats;
 
     [SerializeField, Tooltip("How far away from it's origin this animal will wander by itself.")]
-    private float wanderZone = 10f;
+    protected float wanderZone = 10f;
     public float MaxDistance
     {
       get
@@ -49,80 +49,80 @@ namespace LowPolyAnimalPack
     }
 
     // [SerializeField, Tooltip("How dominent this animal is in the food chain, agressive animals will attack less dominant animals.")]
-    // private int dominance = 1;
-    private int originalDominance = 0;
+    // protected int dominance = 1;
+    protected int originalDominance = 0;
 
     [SerializeField, Tooltip("How far this animal can sense a predator.")]
-    private float awareness = 30f;
+    protected float awareness = 30f;
 
     [SerializeField, Tooltip("How far this animal can sense it's prey.")]
-    private float scent = 30f;
-    private float originalScent = 0f;
+    protected float scent = 30f;
+    protected float originalScent = 0f;
 
     // [SerializeField, Tooltip("How many seconds this animal can run for before it gets tired.")]
-    // private float stamina = 10f;
+    // protected float stamina = 10f;
 
     // [SerializeField, Tooltip("How much this damage this animal does to another animal.")]
-    // private float power = 10f;
+    // protected float power = 10f;
 
     // [SerializeField, Tooltip("How much health this animal has.")]
-    // private float toughness = 5f;
+    // protected float toughness = 5f;
 
     // [SerializeField, Tooltip("Chance of this animal attacking another animal."), Range(0f, 100f)]
-    // private float agression = 0f;
-    private float originalAgression = 0f;
+    // protected float agression = 0f;
+    protected float originalAgression = 0f;
 
     // [SerializeField, Tooltip("How quickly the animal does damage to another animal (every 'attackSpeed' seconds will cause 'power' amount of damage).")]
-    // private float attackSpeed = 0.5f;
+    // protected float attackSpeed = 0.5f;
 
     // [SerializeField, Tooltip("If true, this animal will attack other animals of the same specices.")]
-    // private bool territorial = false;
+    // protected bool territorial = false;
 
     // [SerializeField, Tooltip("Stealthy animals can't be detected by other animals.")]
-    // private bool stealthy = false;
+    // protected bool stealthy = false;
 
     [SerializeField, Tooltip("If true, this animal will never leave it's zone, even if it's chasing or running away from another animal.")]
-    private bool constainedToWanderZone = false;
+    protected bool constainedToWanderZone = false;
 
     [SerializeField, Tooltip("This animal will be peaceful towards species in this list.")]
-    private string[] nonAgressiveTowards;
+    protected string[] nonAgressiveTowards;
 
-    private static List<WanderScript> allAnimals = new List<WanderScript>();
+    protected static List<WanderScript> allAnimals = new List<WanderScript>();
     public static List<WanderScript> AllAnimals { get { return allAnimals; } }
 
     [Space(), Header("Surface Rotation"), Space(5)]
     [SerializeField, Tooltip("If true, this animal will rotate to match the terrain. Ensure you have set the layer of the terrain as 'Terrain'.")]
-    private bool matchSurfaceRotation = false;
+    protected bool matchSurfaceRotation = false;
     [SerializeField, Tooltip("How fast the animnal rotates to match the surface rotation.")]
-    private float surfaceRotationSpeed = 2f;
+    protected float surfaceRotationSpeed = 2f;
 
     [Space(), Header("Debug"), Space(5)]
     [SerializeField, Tooltip("If true, AI changes to this animal will be logged in the console.")]
-    private bool logChanges = false;
+    protected bool logChanges = false;
     [SerializeField, Tooltip("If true, gizmos will be drawn in the editor.")]
-    private bool showGizmos = true;
+    protected bool showGizmos = true;
     [SerializeField]
-    private bool drawWanderRange = true;
+    protected bool drawWanderRange = true;
     [SerializeField]
-    private bool drawScentRange = true;
+    protected bool drawScentRange = true;
     [SerializeField]
-    private bool drawAwarenessRange = true;
+    protected bool drawAwarenessRange = true;
 
-    private Color distanceColor = new Color(0f, 0f, 205f);
-    private Color awarnessColor = new Color(1f, 0f, 1f, 1f);
-    private Color scentColor = new Color(1f, 0f, 0f, 1f);
-    private Animator animator;
-    private CharacterController characterController;
-    private NavMeshAgent navMeshAgent;
-    private Vector3 origin;
-    private int totalIdleStateWeight;
-    private int currentState = 0;
-    private bool dead = false;
-    private bool moving = false;
-    private bool useNavMesh = false;
-    private Vector3 targetLocation = Vector3.zero;
-    private float currentTurnSpeed = 0f;
-    private bool attacking = false;
+    protected Color distanceColor = new Color(0f, 0f, 205f);
+    protected Color awarnessColor = new Color(1f, 0f, 1f, 1f);
+    protected Color scentColor = new Color(1f, 0f, 0f, 1f);
+    protected Animator animator;
+    protected CharacterController characterController;
+    protected NavMeshAgent navMeshAgent;
+    protected Vector3 origin;
+    protected int totalIdleStateWeight;
+    protected int currentState = 0;
+    protected bool dead = false;
+    protected bool moving = false;
+    protected bool useNavMesh = false;
+    protected Vector3 targetLocation = Vector3.zero;
+    protected float currentTurnSpeed = 0f;
+    protected bool attacking = false;
 
     public void OnDrawGizmosSelected()
     {
@@ -182,7 +182,7 @@ namespace LowPolyAnimalPack
       }
     }
 
-    private void Awake()
+    protected virtual void Awake()
     {
       if (idleStates.Length == 0 && movementStates.Length == 0)
       {
@@ -219,7 +219,7 @@ namespace LowPolyAnimalPack
       allAnimals.Add(this);
     }
 
-    private void Start()
+    protected void Start()
     {
       if (AnimalManager.Instance.PeaceTime)
       {
@@ -229,18 +229,18 @@ namespace LowPolyAnimalPack
       StartCoroutine(InitYield());
     }
 
-    private void OnDestroy()
+    protected virtual void OnDestroy()
     {
       allAnimals.Remove(this);
     }
 
-    private IEnumerator InitYield()
+    protected IEnumerator InitYield()
     {
       yield return new WaitForSeconds((Random.Range(0, 200) / 100));
       DecideNextState(false, true);
     }
 
-    private void DecideNextState(bool wasIdle, bool firstState = false)
+    protected virtual void DecideNextState(bool wasIdle, bool firstState = false)
     {
       attacking = false;
 
@@ -343,7 +343,7 @@ namespace LowPolyAnimalPack
       }
     }
 
-    private void BeginIdleState(bool firstState = false)
+    protected void BeginIdleState(bool firstState = false)
     {
       if (!firstState)
       {
@@ -378,7 +378,7 @@ namespace LowPolyAnimalPack
       StartCoroutine(IdleState(stateTime));
     }
 
-    private IEnumerator IdleState(float stateTime)
+    protected IEnumerator IdleState(float stateTime)
     {
       moving = false;
 
@@ -392,7 +392,7 @@ namespace LowPolyAnimalPack
       DecideNextState(true);
     }
 
-    private void BeginWanderState()
+    protected void BeginWanderState()
     {
       Vector3 target = RandonPointInRange();
 
@@ -421,7 +421,7 @@ namespace LowPolyAnimalPack
       }
     }
 
-    private IEnumerator MovementState(Vector3 target)
+    protected IEnumerator MovementState(Vector3 target)
     {
       moving = true;
 
@@ -446,7 +446,7 @@ namespace LowPolyAnimalPack
       DecideNextState(false);
     }
 
-    private IEnumerator NonNavMeshMovementState(Vector3 target)
+    protected IEnumerator NonNavMeshMovementState(Vector3 target)
     {
       moving = true;
       targetLocation = target;
@@ -478,7 +478,7 @@ namespace LowPolyAnimalPack
       DecideNextState(false);
     }
 
-    private void RunAwayFromAnimal(WanderScript predator)
+    protected void RunAwayFromAnimal(WanderScript predator)
     {
       moving = true;
 
@@ -513,7 +513,7 @@ namespace LowPolyAnimalPack
       StartCoroutine(RunAwayState(target, predator));
     }
 
-    private IEnumerator RunAwayState(Vector3 target, WanderScript predator)
+    protected IEnumerator RunAwayState(Vector3 target, WanderScript predator)
     {
       navMeshAgent.speed = movementStates[currentState].moveSpeed;
       navMeshAgent.angularSpeed = movementStates[currentState].turnSpeed;
@@ -543,7 +543,7 @@ namespace LowPolyAnimalPack
       }
     }
 
-    private void NonNavMeshRunAwayFromAnimal(WanderScript predator)
+    protected void NonNavMeshRunAwayFromAnimal(WanderScript predator)
     {
       moving = true;
 
@@ -575,7 +575,7 @@ namespace LowPolyAnimalPack
       StartCoroutine(NonNavMeshRunAwayState(targetLocation, predator));
     }
 
-    private IEnumerator NonNavMeshRunAwayState(Vector3 target, WanderScript predator)
+    protected IEnumerator NonNavMeshRunAwayState(Vector3 target, WanderScript predator)
     {
       currentTurnSpeed = movementStates[currentState].turnSpeed;
 
@@ -613,7 +613,7 @@ namespace LowPolyAnimalPack
       }
     }
 
-    private void ChaseAnimal(WanderScript prey)
+    protected void ChaseAnimal(WanderScript prey)
     {
       Vector3 target = prey.transform.position;
       prey.BeginChase(this);
@@ -643,7 +643,7 @@ namespace LowPolyAnimalPack
       }
     }
 
-    private IEnumerator ChaseState(WanderScript prey)
+    protected IEnumerator ChaseState(WanderScript prey)
     {
       moving = true;
 
@@ -702,7 +702,7 @@ namespace LowPolyAnimalPack
       }
     }
 
-    private IEnumerator NonNavMeshChaseState(WanderScript prey)
+    protected IEnumerator NonNavMeshChaseState(WanderScript prey)
     {
       moving = true;
       targetLocation = prey.transform.position;
@@ -769,7 +769,7 @@ namespace LowPolyAnimalPack
       }
     }
 
-    private void AttackAnimal(WanderScript target)
+    protected void AttackAnimal(WanderScript target)
     {
       attacking = true;
 
@@ -800,7 +800,7 @@ namespace LowPolyAnimalPack
       StartCoroutine(MakeAttack(target));
     }
 
-    private IEnumerator MakeAttack(WanderScript target)
+    protected IEnumerator MakeAttack(WanderScript target)
     {
       target.GetAttacked(this);
 
@@ -826,7 +826,7 @@ namespace LowPolyAnimalPack
       DecideNextState(false);
     }
 
-    private void GetAttacked(WanderScript attacker)
+    protected void GetAttacked(WanderScript attacker)
     {
       if (attacking)
       {
@@ -881,7 +881,7 @@ namespace LowPolyAnimalPack
       }
     }
 
-    private void TakeDamage(float damage)
+    protected void TakeDamage(float damage)
     {
       ScriptableAnimalStats.toughness -= damage;
 
@@ -973,13 +973,13 @@ namespace LowPolyAnimalPack
       }
     }
 
-    private Vector3 RandonPointInRange()
+    protected Vector3 RandonPointInRange()
     {
       Vector3 randomPoint = origin + Random.insideUnitSphere * wanderZone;
       return new Vector3(randomPoint.x, transform.position.y, randomPoint.z);
     }
 
-    private IEnumerator TurnToLookAtTarget(Transform target)
+    protected IEnumerator TurnToLookAtTarget(Transform target)
     {
       while (true)
       {
@@ -997,7 +997,7 @@ namespace LowPolyAnimalPack
       }
     }
 
-    private void BeginChase(WanderScript chasingAnimal)
+    protected void BeginChase(WanderScript chasingAnimal)
     {
       if (attacking)
       {
@@ -1007,7 +1007,7 @@ namespace LowPolyAnimalPack
       StartCoroutine(ChaseCheck(chasingAnimal));
     }
 
-    private IEnumerator ChaseCheck(WanderScript chasingAnimal)
+    protected IEnumerator ChaseCheck(WanderScript chasingAnimal)
     {
       while (Vector3.Distance(transform.position, chasingAnimal.transform.position) > awareness)
       {
@@ -1043,5 +1043,8 @@ namespace LowPolyAnimalPack
 
       DecideNextState(false);
     }
+
+
   }
+
 }
