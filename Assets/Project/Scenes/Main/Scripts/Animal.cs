@@ -17,25 +17,25 @@ namespace Simulator {
 		[SerializeField, Tooltip("Whether the animal is a female.")]
 		protected bool isFemale;
 
-    [SerializeField]
-    private bool drawMateAwarenesRange;
+		[SerializeField]
+		private bool drawMateAwarenesRange;
 
 		private float hunger = 100;
-    protected Color mateAwarenessColor = new Color(1f, 0.5f, 0.75f, 1f);
+		protected Color mateAwarenessColor = new Color(1f, 0.5f, 0.75f, 1f);
 
-    public override void OnDrawGizmosSelected() {
-      base.OnDrawGizmosSelected();
-      if (drawMateAwarenesRange) {
-        //Draw circle radius for Mate Awareness.
-        Gizmos.color = mateAwarenessColor;
-        Gizmos.DrawWireSphere(transform.position, mateAwareness);
+		public override void OnDrawGizmosSelected() {
+			base.OnDrawGizmosSelected();
+			if (drawMateAwarenesRange) {
+				//Draw circle radius for Mate Awareness.
+				Gizmos.color = mateAwarenessColor;
+				Gizmos.DrawWireSphere(transform.position, mateAwareness);
 
 
-        Vector3 IconAwareness = new Vector3(transform.position.x, transform.position.y + mateAwareness, transform.position.z);
-        Gizmos.DrawIcon(IconAwareness, "ico-awareness", true);
-      }
-    }
- 		protected override void Awake() {
+				Vector3 IconAwareness = new Vector3(transform.position.x, transform.position.y + mateAwareness, transform.position.z);
+				Gizmos.DrawIcon(IconAwareness, "ico-awareness", true);
+			}
+		}
+		protected override void Awake() {
 			if (idleStates.Length == 0 && movementStates.Length == 0) {
 
 				Debug.LogError(string.Format("{0} has no idle or movement states state.", gameObject.name));
@@ -103,7 +103,7 @@ namespace Simulator {
 				if (logChanges) {
 					Debug.Log($"{gameObject.name}: Found mate ({GetAnimal(report.MateIndex).gameObject.name}), approaching.");
 				}
-        ApproachMate(GetAnimal(report.MateIndex));
+				ApproachMate(GetAnimal(report.MateIndex));
 				// TODO: implement
 
 				// Start wandering if previously idle
@@ -163,15 +163,15 @@ namespace Simulator {
 						Debug.Log($"{gameObject.name}: Reached mate ({mate.gameObject.name})!");
 					}
 					SetMovementAnimation(false);
-          moving = false;
+					moving = false;
 
 					if (!isFemale) {
 						MateWith(mate);
-            //DecideNextState(false);
+						//DecideNextState(false);
 					} else {
-            mate.MateWith(this);
-          }
-          
+						mate.MateWith(this);
+					}
+
 					//AttackAnimal(prey);
 					yield break;
 				}
@@ -207,53 +207,53 @@ namespace Simulator {
 		}
 
 		private void MateWith(Animal mate) {
-      StartCoroutine(TurnToLookAtTarget(mate.transform));
-      StartCoroutine(mate.TurnToLookAtTarget(this.transform));
+			StartCoroutine(TurnToLookAtTarget(mate.transform));
+			StartCoroutine(mate.TurnToLookAtTarget(this.transform));
 			if (logChanges) {
 				Debug.Log($"{gameObject.name}: Mating with ({mate.gameObject.name})!");
 			}
-      mate.UpdateStateAfterMating();
-      UpdateStateAfterMating();
-      Animal animal = Instantiate(this, new Vector3(this.transform.position.x +2, transform.position.y, transform.position.z + 2), Quaternion.identity);
-      animal.transform.localScale = new Vector3(0.7f, 0.7f, 0.7f);
-    }
+			mate.UpdateStateAfterMating();
+			UpdateStateAfterMating();
+			Animal animal = Instantiate(this, new Vector3(this.transform.position.x + 2, transform.position.y, transform.position.z + 2), Quaternion.identity);
+			animal.transform.localScale = new Vector3(0.7f, 0.7f, 0.7f);
+		}
 
-    private void UpdateStateAfterMating() {
-      hunger -= 35;
-      StopAllCoroutines();
-      StopMoving();
-      DecideNextState(false);
-      
-    }
+		private void UpdateStateAfterMating() {
+			hunger -= 35;
+			StopAllCoroutines();
+			StopMoving();
+			DecideNextState(false);
 
-    private void StopMoving() {
-      if (moving) {
+		}
+
+		private void StopMoving() {
+			if (moving) {
 				if (useNavMesh) {
 					navMeshAgent.SetDestination(transform.position);
 				} else {
 					targetLocation = transform.position;
 				}
 
-        SetMovementAnimation(false);
+				SetMovementAnimation(false);
 				moving = false;
 			} else {
 				if (idleStates.Length > 0 && !string.IsNullOrEmpty(idleStates[currentState].animationBool)) {
 					animator.SetBool(idleStates[currentState].animationBool, false);
 				}
 			}
-    }
+		}
 
 		private IEnumerator BeApproachedBy(Animal mate) {
-      Debug.Log($"{gameObject.name}: being approached by ({mate.gameObject.name})");
+			Debug.Log($"{gameObject.name}: being approached by ({mate.gameObject.name})");
 			while (Vector3.Distance(transform.position, mate.transform.position) > mateAwareness) {
 				yield return new WaitForSeconds(0.5f);
-        Debug.Log($"{gameObject.name}: waiting for ({mate.gameObject.name})");
+				Debug.Log($"{gameObject.name}: waiting for ({mate.gameObject.name})");
 			}
 
 			StopAllCoroutines();
-      StartCoroutine(TurnToLookAtTarget(mate.transform));
+			StartCoroutine(TurnToLookAtTarget(mate.transform));
 			StopMoving();
-      Debug.Log($"{gameObject.name}: deciding for ({mate.gameObject.name})");
+
 		}
 
 		private SearchReport SearchForAnimals() {
