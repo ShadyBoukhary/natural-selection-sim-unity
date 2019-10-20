@@ -124,7 +124,7 @@ namespace LowPolyAnimalPack
     protected float currentTurnSpeed = 0f;
     protected bool attacking = false;
 
-    public void OnDrawGizmosSelected()
+    public virtual void OnDrawGizmosSelected()
     {
       if (!showGizmos)
         return;

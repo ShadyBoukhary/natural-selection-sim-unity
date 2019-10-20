@@ -17,8 +17,25 @@ namespace Simulator {
 		[SerializeField, Tooltip("Whether the animal is a female.")]
 		protected bool isFemale;
 
+    [SerializeField]
+    private bool drawMateAwarenesRange;
+
 		private float hunger = 100;
-		protected override void Awake() {
+    protected Color mateAwarenessColor = new Color(1f, 0.5f, 0.75f, 1f);
+
+    public override void OnDrawGizmosSelected() {
+      base.OnDrawGizmosSelected();
+      if (drawMateAwarenesRange) {
+        //Draw circle radius for Mate Awareness.
+        Gizmos.color = mateAwarenessColor;
+        Gizmos.DrawWireSphere(transform.position, mateAwareness);
+
+
+        Vector3 IconAwareness = new Vector3(transform.position.x, transform.position.y + mateAwareness, transform.position.z);
+        Gizmos.DrawIcon(IconAwareness, "ico-awareness", true);
+      }
+    }
+ 		protected override void Awake() {
 			if (idleStates.Length == 0 && movementStates.Length == 0) {
 
 				Debug.LogError(string.Format("{0} has no idle or movement states state.", gameObject.name));
@@ -64,7 +81,7 @@ namespace Simulator {
 
 			// Run away from predator if found
 			if (report.FoundPredator) {
-        if (logChanges) {
+				if (logChanges) {
 					Debug.Log($"{gameObject.name}: Found predator ({GetAnimal(report.PredatorIndex).gameObject.name}), running away.");
 				}
 				if (useNavMesh) {
@@ -83,9 +100,10 @@ namespace Simulator {
 
 				// Approach animal to mate if found
 			} else if (report.FoundMate) {
-        if (logChanges) {
+				if (logChanges) {
 					Debug.Log($"{gameObject.name}: Found mate ({GetAnimal(report.MateIndex).gameObject.name}), approaching.");
 				}
+        ApproachMate(GetAnimal(report.MateIndex));
 				// TODO: implement
 
 				// Start wandering if previously idle
@@ -117,6 +135,127 @@ namespace Simulator {
 			allAnimals.Remove(this);
 		}
 
+		private void ApproachMate(Animal animal) {
+			Vector3 target = animal.transform.position;
+			StartCoroutine(animal.BeApproachedBy(this));
+			currentState = AnimalUtils.GetFastestMovementState(this);
+			SetMovementAnimation();
+			StartCoroutine(MateState(animal));
+
+		}
+
+		private IEnumerator MateState(Animal mate) {
+			moving = true;
+			navMeshAgent.speed = movementStates[currentState].moveSpeed;
+			navMeshAgent.angularSpeed = movementStates[currentState].turnSpeed;
+			navMeshAgent.SetDestination(mate.transform.position);
+			float timeMoving = 0f;
+			bool gotAway = false;
+
+			while ((navMeshAgent.remainingDistance > navMeshAgent.stoppingDistance || timeMoving < 0.1f) && timeMoving < ScriptableAnimalStats.stamina) {
+				navMeshAgent.SetDestination(mate.transform.position);
+
+				timeMoving += Time.deltaTime;
+
+
+				if (WithinMatingRange(mate)) {
+					if (logChanges) {
+						Debug.Log($"{gameObject.name}: Reached mate ({mate.gameObject.name})!");
+					}
+					SetMovementAnimation(false);
+          moving = false;
+
+					if (!isFemale) {
+						MateWith(mate);
+            //DecideNextState(false);
+					} else {
+            mate.MateWith(this);
+          }
+          
+					//AttackAnimal(prey);
+					yield break;
+				}
+
+				if (constainedToWanderZone && Vector3.Distance(transform.position, origin) > wanderZone) {
+					gotAway = true;
+					navMeshAgent.SetDestination(transform.position);
+					break;
+				}
+
+				yield return null;
+			}
+
+			navMeshAgent.SetDestination(transform.position);
+
+			SetMovementAnimation(false);
+
+			if (timeMoving > ScriptableAnimalStats.stamina || mate.dead || gotAway) {
+				BeginIdleState();
+			} else {
+				ApproachMate(mate);
+			}
+		}
+
+		private bool WithinMatingRange(Animal mate) {
+			return Vector3.Distance(transform.position, mate.transform.position) < 1f;
+		}
+
+		private void SetMovementAnimation(bool state = true) {
+			if (!string.IsNullOrEmpty(movementStates[currentState].animationBool)) {
+				animator.SetBool(movementStates[currentState].animationBool, state);
+			}
+		}
+
+		private void MateWith(Animal mate) {
+      StartCoroutine(TurnToLookAtTarget(mate.transform));
+      StartCoroutine(mate.TurnToLookAtTarget(this.transform));
+			if (logChanges) {
+				Debug.Log($"{gameObject.name}: Mating with ({mate.gameObject.name})!");
+			}
+      mate.UpdateStateAfterMating();
+      UpdateStateAfterMating();
+      Animal animal = Instantiate(this, new Vector3(this.transform.position.x +2, transform.position.y, transform.position.z + 2), Quaternion.identity);
+      animal.transform.localScale = new Vector3(0.7f, 0.7f, 0.7f);
+    }
+
+    private void UpdateStateAfterMating() {
+      hunger -= 35;
+      StopAllCoroutines();
+      StopMoving();
+      DecideNextState(false);
+      
+    }
+
+    private void StopMoving() {
+      if (moving) {
+				if (useNavMesh) {
+					navMeshAgent.SetDestination(transform.position);
+				} else {
+					targetLocation = transform.position;
+				}
+
+        SetMovementAnimation(false);
+				moving = false;
+			} else {
+				if (idleStates.Length > 0 && !string.IsNullOrEmpty(idleStates[currentState].animationBool)) {
+					animator.SetBool(idleStates[currentState].animationBool, false);
+				}
+			}
+    }
+
+		private IEnumerator BeApproachedBy(Animal mate) {
+      Debug.Log($"{gameObject.name}: being approached by ({mate.gameObject.name})");
+			while (Vector3.Distance(transform.position, mate.transform.position) > mateAwareness) {
+				yield return new WaitForSeconds(0.5f);
+        Debug.Log($"{gameObject.name}: waiting for ({mate.gameObject.name})");
+			}
+
+			StopAllCoroutines();
+      StartCoroutine(TurnToLookAtTarget(mate.transform));
+			StopMoving();
+      Debug.Log($"{gameObject.name}: deciding for ({mate.gameObject.name})");
+		}
+
 		private SearchReport SearchForAnimals() {
 
 			bool foundPredator = false, foundPrey = false, foundMate = false;
@@ -127,7 +266,7 @@ namespace Simulator {
 				if (awareness > 0 && !foundPredator && IsPredator(GetAnimal(i))) {
 					foundPredator = true;
 					predatorIndex = i;
-					
+
 					// If a predator is found there is no need to continue
 					return new SearchReport(i);
 
