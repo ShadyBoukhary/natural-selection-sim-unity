@@ -10,6 +10,8 @@ namespace Simulator {
 
 		public MovementState[] MovementStates => movementStates;
 		public bool IsFemale => isFemale;
+    public float MateAwareness => mateAwareness;
+    public float Hunger => hunger;
 		[Space(), Header("Reproductive AI"), Space(5)]
 		[SerializeField, Tooltip("How far this animal can find a mate.")]
 		protected float mateAwareness = 30f;
@@ -329,6 +331,10 @@ namespace Simulator {
 		private bool WillMateDueToChance() {
 			return ScriptableAnimalStats.reproduction >= Random.Range(0, 100);
 		}
+
+    public void SetProperties(bool isFemale, float mateAwareness, float hunger) {
+
+    }
 
 		class SearchReport {
 			public int PredatorIndex { get; set; }
