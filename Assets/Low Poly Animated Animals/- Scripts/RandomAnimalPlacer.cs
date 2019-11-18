@@ -12,6 +12,10 @@ public class RandomAnimalPlacer : MonoBehaviour
     [SerializeField] GameObject[] animals;
 
     [ContextMenu("Spawn Animals")]
+
+    private void Start() {
+      SpawnAnimals();
+    }
     void SpawnAnimals()
     {
 		var parent = new GameObject("SpawnedAnimals");
@@ -19,7 +23,7 @@ public class RandomAnimalPlacer : MonoBehaviour
         for (int i = 0; i < spawnAmmount; i++)
         {
             var value = Random.Range(0, animals.Length);
-
+            print($"Instantiating {animals[value].gameObject.name}. Value: {value}");
             Instantiate(animals[value], RandomNavmeshLocation(spawnSize), Quaternion.identity, parent.transform);
         }
     }

@@ -14,12 +14,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   dominance: 5
   stamina: 30
-  power: 10
+  power: 15
   toughness: 40
-  agression: 64.7
+  agression: 53.9
   attackSpeed: 1
   territorial: 0
   stealthy: 0
-  reproduction: 100
+  reproduction: 43
   maxAge: 327
-  digestionRate: 0.32
+  digestionRate: 1

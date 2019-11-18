@@ -13,6 +13,8 @@
     public static bool AreOppositeSex(Animal a, Animal b) {
       return a.IsFemale != b.IsFemale;
     }
+
+    public static float GameSpeed => 0.1f;
 	}
 }
 

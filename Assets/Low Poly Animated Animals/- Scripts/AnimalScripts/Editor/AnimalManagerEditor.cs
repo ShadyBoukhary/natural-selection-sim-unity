@@ -8,26 +8,26 @@ namespace LowPolyAnimalPack
   [CustomEditor(typeof(AnimalManager))]
   public class AnimalManagerEditor : Editor
   {
-    public override void OnInspectorGUI()
-    {
-      AnimalManager animalManager = (AnimalManager)target;
+    // public override void OnInspectorGUI()
+    // {
+    //   AnimalManager animalManager = (AnimalManager)target;
 
-      if (!Application.isPlaying)
-      {
-        base.OnInspectorGUI();
-        return;
-      }
+    //   if (!Application.isPlaying)
+    //   {
+    //     base.OnInspectorGUI();
+    //     return;
+    //   }
 
-      GUILayout.Space(10);
+      // GUILayout.Space(15);
 
-      animalManager.PeaceTime =  EditorGUILayout.Toggle("Peace Time", animalManager.PeaceTime);
+      // animalManager.PeaceTime =  EditorGUILayout.Toggle("Peace Time", animalManager.PeaceTime);
 
-      GUILayout.Space(5);
+      // GUILayout.Space(10);
 
-      if (GUILayout.Button("Nuke Animals"))
-      {
-        animalManager.Nuke();
-      }
-    }
+      // if (GUILayout.Button("Nuke Animals"))
+      // {
+      //   animalManager.Nuke();
+      // }
+    //}
   }
 }

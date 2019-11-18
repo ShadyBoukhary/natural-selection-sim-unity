@@ -10,8 +10,8 @@ namespace Simulator {
 
 		public MovementState[] MovementStates => movementStates;
 		public bool IsFemale => isFemale;
-    public float MateAwareness => mateAwareness;
-    public float Hunger => hunger;
+		public float MateAwareness => mateAwareness;
+
 		[Space(), Header("Reproductive AI"), Space(5)]
 		[SerializeField, Tooltip("How far this animal can find a mate.")]
 		protected float mateAwareness = 30f;
@@ -19,11 +19,28 @@ namespace Simulator {
 		[SerializeField, Tooltip("Whether the animal is a female.")]
 		protected bool isFemale;
 
+
+		public string Species => ScriptableAnimalStats.name;
+    public string SpeciesName;
+
+
 		[SerializeField]
 		private bool drawMateAwarenesRange;
 
-		private float hunger = 100;
+
 		protected Color mateAwarenessColor = new Color(1f, 0.5f, 0.75f, 1f);
+
+		[Space(), Header("Stats"), Space(5)]
+		[SerializeField]
+		private float health;
+
+		[SerializeField]
+		private float hunger = 100;
+		public float Hunger => hunger;
+
+		[SerializeField]
+		private bool isAlive;
+		public bool IsAlive => isAlive;
 
 		public override void OnDrawGizmosSelected() {
 			base.OnDrawGizmosSelected();
@@ -57,6 +74,10 @@ namespace Simulator {
 			originalDominance = ScriptableAnimalStats.dominance;
 			originalScent = scent;
 			originalAgression = ScriptableAnimalStats.agression;
+			health = ScriptableAnimalStats.toughness;
+			isAlive = !dead;
+      SpeciesName = ScriptableAnimalStats.name;
+
 
 			if (navMeshAgent) {
 				useNavMesh = true;
@@ -67,12 +88,36 @@ namespace Simulator {
 				transform.GetChild(0).gameObject.AddComponent<SurfaceRotation>().SetRotationSpeed(surfaceRotationSpeed);
 			}
 
+
 			allAnimals.Add(this);
 		}
 
 
 		private static Animal GetAnimal(int i) {
 			return (Animal)allAnimals[i];
+		}
+
+    protected new void Start()
+    {
+
+
+      StartCoroutine(InitYield());
+    }
+		private void Update() {
+			if (species != "Rabbit") {
+				if (isAlive) {
+					if (hunger <= 0) {
+						TakeDamage(1 * AnimalUtils.GameSpeed);
+
+					} else {
+						hunger -= 1 * this.ScriptableAnimalStats.digestionRate * AnimalUtils.GameSpeed;
+					}
+					isAlive = !dead;
+				}
+			}
+
+
+
 		}
 
 
@@ -94,43 +139,46 @@ namespace Simulator {
 				}
 
 				// Chase prey if found
-			} else if (report.FoundPrey) {
+			} else if (report.FoundPrey && WillAttackDueToChance()) {
 				if (logChanges) {
 					Debug.Log($"{gameObject.name}: Found prey ({GetAnimal(report.PreyIndex).gameObject.name}), chasing.");
 				}
 				ChaseAnimal(GetAnimal(report.PreyIndex));
 
 				// Approach animal to mate if found
-			} else if (report.FoundMate) {
+			} else if (report.FoundMate && WillMateDueToChance()) {
 				if (logChanges) {
 					Debug.Log($"{gameObject.name}: Found mate ({GetAnimal(report.MateIndex).gameObject.name}), approaching.");
 				}
 				ApproachMate(GetAnimal(report.MateIndex));
 				// TODO: implement
 
+      } else {
+        BeginWanderState();
+      }
 				// Start wandering if previously idle
-			} else if (wasIdle && movementStates.Length > 0) {
-				if (logChanges) {
-					Debug.Log(string.Format("{0}: Wandering.", gameObject.name));
-				}
-				BeginWanderState();
+			// } else if ((hunger < 20 && movementStates.Length > 0) || (wasIdle && movementStates.Length > 0)) {
+			// 	if (logChanges) {
+			// 		Debug.Log(string.Format("{0}: Wandering.", gameObject.name));
+			// 	}
+			// 	BeginWanderState();
 
-				// Idle otherwise
-			} else if (idleStates.Length > 0) {
-				if (logChanges) {
-					Debug.Log(string.Format("{0}: Idling.", gameObject.name));
-				}
-				BeginIdleState(firstState);
+			// 	// Idle otherwise
+			// } else if (idleStates.Length > 0) {
+			// 	if (logChanges) {
+			// 		Debug.Log(string.Format("{0}: Idling.", gameObject.name));
+			// 	}
+			// 	BeginIdleState(firstState);
 
-				// backup selection
-			} else if (idleStates.Length == 0) {
-				BeginWanderState();
+			// 	// backup selection
+			// } else if (idleStates.Length == 0) {
+			// 	BeginWanderState();
 
-			} else if (movementStates.Length == 0) {
-				BeginIdleState();
-			} else {
-				Debug.LogError($"{gameObject.name}: Unknown state when deciding next state.");
-			}
+			// } else if (movementStates.Length == 0) {
+			// 	BeginIdleState();
+			// } else {
+			// 	Debug.LogError($"{gameObject.name}: Unknown state when deciding next state.");
+			// }
 
 		}
 		protected override void OnDestroy() {
@@ -192,7 +240,8 @@ namespace Simulator {
 			SetMovementAnimation(false);
 
 			if (timeMoving > ScriptableAnimalStats.stamina || mate.dead || gotAway) {
-				BeginIdleState();
+				//BeginIdleState();
+        BeginWanderState();
 			} else {
 				ApproachMate(mate);
 			}
@@ -216,12 +265,14 @@ namespace Simulator {
 			}
 			mate.UpdateStateAfterMating();
 			UpdateStateAfterMating();
-			Animal animal = Instantiate(this, new Vector3(this.transform.position.x + 2, transform.position.y, transform.position.z + 2), Quaternion.identity);
-			animal.transform.localScale = new Vector3(0.7f, 0.7f, 0.7f);
+			Reproduction.Reproduce(this, mate);
+			//Animal animal = Instantiate(this, new Vector3(this.transform.position.x + 2, transform.position.y, transform.position.z + 2), Quaternion.identity);
+			//animal.transform.localScale = new Vector3(0.7f, 0.7f, 0.7f);
 		}
 
 		private void UpdateStateAfterMating() {
-			hunger -= 35;
+      if (SpeciesName != "Rabbit")
+			  hunger -= 35;
 			StopAllCoroutines();
 			StopMoving();
 			DecideNextState(false);
@@ -293,8 +344,7 @@ namespace Simulator {
 		private bool IsPrey(Animal potentialPrey) {
 			return CanAttack(potentialPrey)
 				&& IsAggressiveTowards(potentialPrey)
-				&& IsWithinRange(potentialPrey, scent)
-				&& WillAttackDueToChance();
+				&& IsWithinRange(potentialPrey, scent);
 		}
 
 		private bool CanAttack(Animal potentialPrey) {
@@ -314,7 +364,7 @@ namespace Simulator {
 		}
 
 		private bool WillAttackDueToChance() {
-			return ScriptableAnimalStats.agression >= Random.Range(0, 100);
+			return ScriptableAnimalStats.agression * 0.8 + (100 - hunger)  >= Random.Range(0, 100);
 		}
 
 		private bool CanMate() {
@@ -324,7 +374,7 @@ namespace Simulator {
 		private bool IsMate(Animal potentialMate) {
 			return CanMate() && potentialMate != this && species == potentialMate.species
 				&& AnimalUtils.AreOppositeSex(this, potentialMate) && potentialMate.CanMate()
-				&& IsWithinRange(potentialMate, mateAwareness) && WillMateDueToChance()
+				&& IsWithinRange(potentialMate, mateAwareness)
 				&& potentialMate.WillMateDueToChance(); // because consent is mandatory
 		}
 
@@ -332,8 +382,49 @@ namespace Simulator {
 			return ScriptableAnimalStats.reproduction >= Random.Range(0, 100);
 		}
 
-    public void SetProperties(bool isFemale, float mateAwareness, float hunger) {
+		protected override void TakeDamage(float damage) {
+			health -= damage;
 
+			if (health <= 0) {
+				Die();
+			}
+		}
+
+		public void SetProperties(bool isFemale, float mateAwareness, float hunger) {
+      this.isFemale = isFemale;
+      this.mateAwareness = mateAwareness;
+      this.hunger = hunger;
+		}
+
+    protected override IEnumerator MakeAttack(WanderScript target)
+    {
+      Animal t = (Animal)target;
+      t.GetAttacked(this);
+
+      float timer = 0f;
+      while (!t.dead)
+      {
+        timer += Time.deltaTime;
+
+        if (timer > ScriptableAnimalStats.attackSpeed)
+        {
+          t.TakeDamage(ScriptableAnimalStats.power);
+          hunger += ScriptableAnimalStats.power * 2.5f;
+          if (hunger > 100) hunger = 100;
+          health += ScriptableAnimalStats.power * 0.3f;
+          if (health > 100) health = 100;
+          timer = 0f;
+        }
+
+        yield return null;
+      }
+
+      if (!string.IsNullOrEmpty(attackingStates[currentState].animationBool))
+      {
+        animator.SetBool(attackingStates[currentState].animationBool, false);
+      }
+
+      DecideNextState(false);
     }
 
 		class SearchReport {

@@ -800,7 +800,7 @@ namespace LowPolyAnimalPack
       StartCoroutine(MakeAttack(target));
     }
 
-    protected IEnumerator MakeAttack(WanderScript target)
+    protected virtual IEnumerator MakeAttack(WanderScript target)
     {
       target.GetAttacked(this);
 
@@ -881,7 +881,7 @@ namespace LowPolyAnimalPack
       }
     }
 
-    protected void TakeDamage(float damage)
+    protected virtual void TakeDamage(float damage)
     {
       ScriptableAnimalStats.toughness -= damage;
 
@@ -955,6 +955,8 @@ namespace LowPolyAnimalPack
           }
         }
       }
+      //AllAnimals.Remove(this);
+      //Destroy(this);
     }
 
     public void SetPeaceTime(bool peace)
