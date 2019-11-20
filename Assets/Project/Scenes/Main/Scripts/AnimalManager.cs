@@ -4,6 +4,8 @@ using LowPolyAnimalPack;
 using System.IO;
 
 namespace Simulator {
+
+	// Manages animal populations and logs
 	public class AnimalManager : MonoBehaviour {
 		[SerializeField]
 		private bool peaceTime;
@@ -18,8 +20,8 @@ namespace Simulator {
 		public int frame = 0;
 		BackgroundWorker worker;
 
-    [SerializeField]
-    string outputName;
+		[SerializeField]
+		string outputName;
 
 		public bool PeaceTime {
 			get {
@@ -51,6 +53,8 @@ namespace Simulator {
 				Debug.Log("AnimalManager: Peacetime is enabled, all animals are non-agressive.");
 				SwitchPeaceTime(true);
 			}
+
+			// Run logs on a background thread
 			worker = new BackgroundWorker();
 			worker.DoWork += DoWork;
 			worker.RunWorkerCompleted += RunWorkerCompletedEventHandler;
@@ -58,16 +62,21 @@ namespace Simulator {
 
 		}
 
+		/**
+			Logs the populations to an output file on a background thread.
+		*/
 		void DoWork(object sender, DoWorkEventArgs e) {
 			print("Starting Work");
-      string path = $"./output/run{outputName}.txt";
-      Directory.CreateDirectory("./output");
-      File.Delete(path);
+			string path = $"./output/run{outputName}.txt";
+			Directory.CreateDirectory("./output");
+			File.Delete(path);
 			// Open the file to read from.
 			int f = frame;
 			while (frame < 10000) {
+				// Only do this once per frame, synchronize with framerate
 				if (f < frame) {
 
+					// count populations
 					List<WanderScript> list = Simulator.Animal.AllAnimals;
 					int rabbits = 0;
 					int wolves = 0;
@@ -80,10 +89,11 @@ namespace Simulator {
 					wolfPopulation = wolves;
 					rabbitPopulation = rabbits;
 					f = frame;
-          if (f % 10 == 0) {
-            string s = $"{frame},{wolves},{rabbits}";
-            File.AppendAllLines(path, new List<string>() { s });
-          }
+					// append population logs every 10 frames
+					if (f % 10 == 0) {
+						string s = $"{frame},{wolves},{rabbits}";
+						File.AppendAllLines(path, new List<string>() { s });
+					}
 
 				}
 			}
@@ -115,6 +125,7 @@ namespace Simulator {
 			}
 		}
 
+		// Updates the logs once per frame on a background thread
 		private void Update() {
 			frame++;
 			worker.Update();

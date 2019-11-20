@@ -2,10 +2,11 @@
 using System.Collections.Generic;
 using UnityEngine;
 
+
 namespace Simulator
 {
     [CreateAssetMenu(fileName = "New Simulation Animal Stats", menuName = "Simulation/NewAnimalStats", order = 1)]
-
+    // Animal stats set by the user
     public class AnimalStats : global::AnimalStats
     {
         [SerializeField, Tooltip("Chance of this animal reproducing with another animal."), Range(0f, 100f)]

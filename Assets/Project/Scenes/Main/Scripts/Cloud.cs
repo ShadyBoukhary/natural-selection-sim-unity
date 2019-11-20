@@ -29,23 +29,30 @@ public class Cloud : MonoBehaviour {
 	// Update is called once per frame
 	void Update() {
 
-		// Daylight
-		float offset = 0.013f;
+		float offset = 0.013f;	// movement offset
 		Vector3 minimumSize = originalSize / 4;
 		float sunPosition = sun.transform.position.y;
+
+		// if it is daytime
 		if (sunPosition > 200) {
+			// increase cloud sizes
 			transform.localScale += new Vector3(dt * 0.1f, dt * 0.1f, dt * 0.1f);
+
+			// move could in random x direction with 85% in positive x
 			int sign = -1;
 			if (Random.Range(0, 100) < 85) {
 				sign = 1;
 			}
 			transform.Translate(offset * sign, 0, 0);
 
+		// if it is nighttime
 		} else {
+			// Decrese cloud sizes up to a minimum
 			transform.localScale -= new Vector3(dt * 0.1f, dt * 0.1f, dt * 0.1f);
 			if (transform.localScale.x < minimumSize.x || transform.localScale.y < minimumSize.y || transform.localScale.z < minimumSize.z) {
 				transform.localScale = minimumSize;
 			}
+			// move clouds in a random x direction
 			int sign = 1;
 			if (Random.Range(0, 100) < 85) {
 				sign = -1;
@@ -54,6 +61,7 @@ public class Cloud : MonoBehaviour {
 		}
 
 		// Change color
+		// start changing color when the sun sets
 		float sunOffsetColor = sunPosition - 200;
 		float changeColorOffset = 0.0000001f;
 		currentColor.r += changeColorOffset * sunOffsetColor;

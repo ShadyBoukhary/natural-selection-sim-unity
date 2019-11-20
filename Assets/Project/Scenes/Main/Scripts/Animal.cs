@@ -21,7 +21,7 @@ namespace Simulator {
 
 
 		public string Species => ScriptableAnimalStats.name;
-    public string SpeciesName;
+		public string SpeciesName;
 
 
 		[SerializeField]
@@ -76,7 +76,7 @@ namespace Simulator {
 			originalAgression = ScriptableAnimalStats.agression;
 			health = ScriptableAnimalStats.toughness;
 			isAlive = !dead;
-      SpeciesName = ScriptableAnimalStats.name;
+			SpeciesName = ScriptableAnimalStats.name;
 
 
 			if (navMeshAgent) {
@@ -97,12 +97,13 @@ namespace Simulator {
 			return (Animal)allAnimals[i];
 		}
 
-    protected new void Start()
-    {
+		protected new void Start() {
+			StartCoroutine(InitYield());
+		}
 
-
-      StartCoroutine(InitYield());
-    }
+		/**
+			Update health and hunger every frame
+		*/
 		private void Update() {
 			if (species != "Rabbit") {
 				if (isAlive) {
@@ -115,12 +116,13 @@ namespace Simulator {
 					isAlive = !dead;
 				}
 			}
-
-
-
 		}
 
+		/**
+			Decide the next state of the animal by searching for animals and deciding whether to run
+			away from a predator, chase a prey, approach a mate, or wander aimlessly.
 
+		*/
 		protected override void DecideNextState(bool wasIdle, bool firstState = false) {
 			attacking = false;
 
@@ -153,38 +155,17 @@ namespace Simulator {
 				ApproachMate(GetAnimal(report.MateIndex));
 				// TODO: implement
 
-      } else {
-        BeginWanderState();
-      }
-				// Start wandering if previously idle
-			// } else if ((hunger < 20 && movementStates.Length > 0) || (wasIdle && movementStates.Length > 0)) {
-			// 	if (logChanges) {
-			// 		Debug.Log(string.Format("{0}: Wandering.", gameObject.name));
-			// 	}
-			// 	BeginWanderState();
-
-			// 	// Idle otherwise
-			// } else if (idleStates.Length > 0) {
-			// 	if (logChanges) {
-			// 		Debug.Log(string.Format("{0}: Idling.", gameObject.name));
-			// 	}
-			// 	BeginIdleState(firstState);
-
-			// 	// backup selection
-			// } else if (idleStates.Length == 0) {
-			// 	BeginWanderState();
-
-			// } else if (movementStates.Length == 0) {
-			// 	BeginIdleState();
-			// } else {
-			// 	Debug.LogError($"{gameObject.name}: Unknown state when deciding next state.");
-			// }
-
+			} else {
+				BeginWanderState();
+			}
 		}
 		protected override void OnDestroy() {
 			allAnimals.Remove(this);
 		}
 
+		/**
+			Moves towards a mate at the fastest speed.
+		*/
 		private void ApproachMate(Animal animal) {
 			Vector3 target = animal.transform.position;
 			StartCoroutine(animal.BeApproachedBy(this));
@@ -194,6 +175,10 @@ namespace Simulator {
 
 		}
 
+		/**
+			Changes the state to a mate state. Asynchronously approaches a mate and mates when it reaches it.
+			If the mate is too far, changes state to idle.
+		*/
 		private IEnumerator MateState(Animal mate) {
 			moving = true;
 			navMeshAgent.speed = movementStates[currentState].moveSpeed;
@@ -241,7 +226,7 @@ namespace Simulator {
 
 			if (timeMoving > ScriptableAnimalStats.stamina || mate.dead || gotAway) {
 				//BeginIdleState();
-        BeginWanderState();
+				BeginWanderState();
 			} else {
 				ApproachMate(mate);
 			}
@@ -257,6 +242,9 @@ namespace Simulator {
 			}
 		}
 
+		/**
+			Mate and reproduce with a mate. Updates health after mating and spawns a new animal.
+		*/
 		private void MateWith(Animal mate) {
 			StartCoroutine(TurnToLookAtTarget(mate.transform));
 			StartCoroutine(mate.TurnToLookAtTarget(this.transform));
@@ -271,14 +259,17 @@ namespace Simulator {
 		}
 
 		private void UpdateStateAfterMating() {
-      if (SpeciesName != "Rabbit")
-			  hunger -= 35;
+			if (SpeciesName != "Rabbit")
+				hunger -= 35;
 			StopAllCoroutines();
 			StopMoving();
 			DecideNextState(false);
 
 		}
 
+		/**
+			Stops movement animation
+		*/
 		private void StopMoving() {
 			if (moving) {
 				if (useNavMesh) {
@@ -296,6 +287,9 @@ namespace Simulator {
 			}
 		}
 
+		/**
+			Face the animal that is approaching to prepare for mating
+		*/
 		private IEnumerator BeApproachedBy(Animal mate) {
 			Debug.Log($"{gameObject.name}: being approached by ({mate.gameObject.name})");
 			while (Vector3.Distance(transform.position, mate.transform.position) > mateAwareness) {
@@ -309,6 +303,10 @@ namespace Simulator {
 
 		}
 
+		/**
+			Searches for predators, preys, and potential mates.
+			Terminates search if a predator is found. Otherwise, returns a SearchReport
+		*/
 		private SearchReport SearchForAnimals() {
 
 			bool foundPredator = false, foundPrey = false, foundMate = false;
@@ -337,16 +335,24 @@ namespace Simulator {
 			return new SearchReport(predatorIndex, preyIndex, mateIndex);
 		}
 
+		/**
+			Determines whether an animal is a predator
+		*/
 		private bool IsPredator(Animal potentialPredator) {
 			return IsWithinRange(potentialPredator, awareness) && potentialPredator.CanAttack(this);
 		}
 
+		/**
+			Returns whether an animal is a viable prey
+		*/
 		private bool IsPrey(Animal potentialPrey) {
 			return CanAttack(potentialPrey)
 				&& IsAggressiveTowards(potentialPrey)
 				&& IsWithinRange(potentialPrey, scent);
 		}
-
+		/**
+			Returns whether a predator can attack a certain potential prey
+		*/
 		private bool CanAttack(Animal potentialPrey) {
 			return !potentialPrey.dead && potentialPrey != this
 				&& (potentialPrey.species != species || ScriptableAnimalStats.territorial)
@@ -359,18 +365,24 @@ namespace Simulator {
 			return p < 0;
 		}
 
+		/**
+			Returns whether 2 animals are within a certain range of each other
+		*/
 		private bool IsWithinRange(Animal animal, float range) {
 			return Vector3.Distance(transform.position, animal.transform.position) <= range;
 		}
 
 		private bool WillAttackDueToChance() {
-			return ScriptableAnimalStats.agression * 0.8 + (100 - hunger)  >= Random.Range(0, 100);
+			return ScriptableAnimalStats.agression * 0.8 + (100 - hunger) >= Random.Range(0, 100);
 		}
 
 		private bool CanMate() {
 			return !dead && !attacking && hunger >= 80;
 		}
 
+		/**
+			Determines whether an animal can mate with another
+		*/
 		private bool IsMate(Animal potentialMate) {
 			return CanMate() && potentialMate != this && species == potentialMate.species
 				&& AnimalUtils.AreOppositeSex(this, potentialMate) && potentialMate.CanMate()
@@ -381,7 +393,9 @@ namespace Simulator {
 		private bool WillMateDueToChance() {
 			return ScriptableAnimalStats.reproduction >= Random.Range(0, 100);
 		}
-
+		/**
+			Reduce health by damage and die if health is below 1
+		*/
 		protected override void TakeDamage(float damage) {
 			health -= damage;
 
@@ -391,41 +405,42 @@ namespace Simulator {
 		}
 
 		public void SetProperties(bool isFemale, float mateAwareness, float hunger) {
-      this.isFemale = isFemale;
-      this.mateAwareness = mateAwareness;
-      this.hunger = hunger;
+			this.isFemale = isFemale;
+			this.mateAwareness = mateAwareness;
+			this.hunger = hunger;
 		}
 
-    protected override IEnumerator MakeAttack(WanderScript target)
-    {
-      Animal t = (Animal)target;
-      t.GetAttacked(this);
+		/**
+			Change state to attack state.
+			Attack as often as attack speed allows, get attacked from target too.
+			Updates hunger and health if animal is killed.
+		*/
+		protected override IEnumerator MakeAttack(WanderScript target) {
+			Animal t = (Animal)target;
+			t.GetAttacked(this);
 
-      float timer = 0f;
-      while (!t.dead)
-      {
-        timer += Time.deltaTime;
+			float timer = 0f;
+			while (!t.dead) {
+				timer += Time.deltaTime;
 
-        if (timer > ScriptableAnimalStats.attackSpeed)
-        {
-          t.TakeDamage(ScriptableAnimalStats.power);
-          hunger += ScriptableAnimalStats.power * 2.5f;
-          if (hunger > 100) hunger = 100;
-          health += ScriptableAnimalStats.power * 0.3f;
-          if (health > 100) health = 100;
-          timer = 0f;
-        }
+				if (timer > ScriptableAnimalStats.attackSpeed) {
+					t.TakeDamage(ScriptableAnimalStats.power);
+					hunger += ScriptableAnimalStats.power * 2.5f;
+					if (hunger > 100) hunger = 100;
+					health += ScriptableAnimalStats.power * 0.3f;
+					if (health > 100) health = 100;
+					timer = 0f;
+				}
 
-        yield return null;
-      }
+				yield return null;
+			}
 
-      if (!string.IsNullOrEmpty(attackingStates[currentState].animationBool))
-      {
-        animator.SetBool(attackingStates[currentState].animationBool, false);
-      }
+			if (!string.IsNullOrEmpty(attackingStates[currentState].animationBool)) {
+				animator.SetBool(attackingStates[currentState].animationBool, false);
+			}
 
-      DecideNextState(false);
-    }
+			DecideNextState(false);
+		}
 
 		class SearchReport {
 			public int PredatorIndex { get; set; }
